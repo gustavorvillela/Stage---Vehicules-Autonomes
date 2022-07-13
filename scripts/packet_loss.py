@@ -41,6 +41,9 @@ camera = PiCamera()
 motor_speed = 70
 step_length = 1
 
+lr_listen = motor_speed
+ll_listen = motor_speed
+
 right = rospy.Publisher('raspi_arduino_right',Int8, queue_size=10)
 left = rospy.Publisher('raspi_arduino_left',Int8, queue_size=10)
 
@@ -255,20 +258,20 @@ def process_cmd(cmd):
         #    print("Mean bit lost: ",sum(lresp)/total)
     elif cmd_type["[t]est motor msgs"]:
         print("Spinning motors...\n")
-        #while motor_speed > 60:
+        global lr_listen, ll_listen
         motor_speed=50
         loss = []
         total = 10
         for i in range(total):
-            #motor_speed = motor_speed - 1
+            motor_speed = motor_speed - 1
             right.publish(motor_speed)
             left.publish(motor_speed)
-            #lr, ll = testArduino(motor_speed)
-            #print("Left wheel:  ",ll,"\n")
-            if lr != motor_speed:
-                loss.append(lr)
-            elif ll != motor_speed:
-                loss.append(ll)
+            rospy.Subscriber("arduino_raspi_right", Int8, callbackRight)
+            rospy.Subscriber("arduino_raspi_left", Int8, callbackLeft)
+            if lr_listen != motor_speed:
+                loss.append(lr_listen)
+            elif ll_listen != motor_speed:
+                loss.append(ll_listen)
             time.sleep(0.1)
         write_order(serial_file, Order.STOP)
         motor_speed = 70
@@ -361,12 +364,16 @@ def testArduino(motor_speed):
 
 def callbackRight(lr):
 
+    global lr_listen
+    lr_listen = lr
     print("Right wheel: ",lr)
 
 
 
-def callbackLeftt(ll):
+def callbackLeft(ll):
 
+    global ll_listen
+    ll_listen = ll
     print("Left wheel: ",ll,"\n")
 
 
