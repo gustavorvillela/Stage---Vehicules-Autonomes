@@ -273,7 +273,8 @@ def process_cmd(cmd):
             elif ll_listen != motor_speed:
                 loss.append(ll_listen)
             time.sleep(0.1)
-        write_order(serial_file, Order.STOP)
+        right.publish(0)
+        left.publish(0)
         motor_speed = 70
         print("% of lost packets: " + str(len(loss)*100/total) + "% for "+str(total)+" packets")
     else:

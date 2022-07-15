@@ -6,9 +6,44 @@
 #include "parameters.h"
 #include <Servo.h>
 #include <Metro.h>
+#include <ros.h>
+#include <std_msgs/Int8.h>
+#define USE_USBCON
 
 #define LEFT 0
 #define RIGHT 1
+
+ros::NodeHandle nh;
+
+std_msgs::Int8 right_wheel;
+std_msgs::Int8 left_wheel;
+
+ros::Publisher right("arduino_raspi_right", &right_wheel);
+ros::Publisher left("arduino_raspi_left", &left_wheel);
+
+int right_test;
+int left_test;
+
+void rightCB( const std_msgs::Int8 &right_speed){
+  
+  //motor_speed_right = right_speed.data;
+  right_test = right_speed.data;
+  
+  
+}  
+
+void leftCB( const std_msgs::Int8 &left_speed){
+  
+  //motor_speed_left = right_left.data;
+  left_test = left_speed.data;
+  
+} 
+
+ros::Subscriber<std_msgs::Int8> sub_right("raspi_arduino_right",rightCB);
+ros::Subscriber<std_msgs::Int8> sub_left("raspi_arduino_left",leftCB);
+
+
+
 
 int coder[2] = {
   0,0};
@@ -40,6 +75,11 @@ int MSG_cnt = 0;
 
 void setup()
 {
+  nh.initNode();
+  nh.advertise(right);
+  nh.advertise(left);
+  nh.subscribe(sub_right);
+  nh.subscribe(sub_left);
   frontServo.attach(frontPin);
   frontServo.write(pos);
   backServo.attach(backPin);
@@ -95,6 +135,18 @@ void loop()
 {
   get_messages_from_serial();
   update_motors_orders();
+  //right_wheel.data = motor_speed_right;
+  //left_wheel.data = motor_speed_left;
+  
+  
+  
+  right_wheel.data = right_test;
+  left_wheel.data = left_test;
+  
+  right.publish(&right_wheel);
+  left.publish(&left_wheel);
+  
+  nh.spinOnce();
 }
 
 void update_motors_orders()
@@ -258,13 +310,14 @@ void get_messages_from_serial()
         }
         case TEST:
         {
-          motor_speed_right = read_i8();
-          motor_speed_left = read_i8();
-          write_i8(motor_speed_right);
-          write_i8(motor_speed_left);
-          write_i16(random(100));
+          //motor_speed_right = read_i8();
+          //motor_speed_left = read_i8();
+          //write_i8(motor_speed_right);
+          //write_i8(motor_speed_left);
+          //write_i16(random(100));
           //Serial.println(listen_r+7);
           //Serial.println(listen_l+7);
+
           break;
         }
 
