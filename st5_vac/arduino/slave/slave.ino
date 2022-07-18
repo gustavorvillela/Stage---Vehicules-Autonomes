@@ -13,7 +13,7 @@
 #define LEFT 0
 #define RIGHT 1
 
-ros::NodeHandle nh;
+ros::NodeHandle_<ArduinoHardware, 4, 4, 280, 280> nh;
 
 std_msgs::Int8 right_wheel;
 std_msgs::Int8 left_wheel;
@@ -21,8 +21,10 @@ std_msgs::Int8 left_wheel;
 ros::Publisher right("arduino_raspi_right", &right_wheel);
 ros::Publisher left("arduino_raspi_left", &left_wheel);
 
-int right_test;
-int left_test;
+int8_t right_test;
+int8_t left_test;
+int8_t motor_speed_right = 0;
+int8_t motor_speed_left = 0;
 
 void rightCB( const std_msgs::Int8 &right_speed){
   
@@ -34,7 +36,7 @@ void rightCB( const std_msgs::Int8 &right_speed){
 
 void leftCB( const std_msgs::Int8 &left_speed){
   
-  //motor_speed_left = right_left.data;
+  //motor_speed_left = left_speed.data;
   left_test = left_speed.data;
   
 } 
@@ -65,11 +67,9 @@ uint8_t EnPwmCmd[4]={0x44,0x02,0xbb,0x01};    // distance measure command
 
 
 bool is_connected = false; ///< True if the connection with the master is available
-int8_t motor_speed_right = 0;
-int8_t motor_speed_left = 0;
 
-int total = 10000;
-int MSG_cnt = 0;
+
+
 //int callback[100] = {0}; // freezes arduino connection if too big
 
 
@@ -137,16 +137,15 @@ void loop()
   update_motors_orders();
   //right_wheel.data = motor_speed_right;
   //left_wheel.data = motor_speed_left;
-  
-  
-  
   right_wheel.data = right_test;
   left_wheel.data = left_test;
+          
   
-  right.publish(&right_wheel);
-  left.publish(&left_wheel);
-  
+          
   nh.spinOnce();
+  //delay(2);
+          
+  
 }
 
 void update_motors_orders()
@@ -318,7 +317,10 @@ void get_messages_from_serial()
           //Serial.println(listen_r+7);
           //Serial.println(listen_l+7);
 
+          right.publish(&right_wheel);
+          left.publish(&left_wheel);
           break;
+
         }
 
   	// Unknown order
