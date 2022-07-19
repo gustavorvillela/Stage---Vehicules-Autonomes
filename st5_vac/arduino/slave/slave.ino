@@ -85,7 +85,7 @@ void setup()
   backServo.attach(backPin);
   backServo.write(pos);
   // Init Serial
-  Serial.begin(SERIAL_BAUD);
+  //Serial.begin(SERIAL_BAUD);
   attachInterrupt(LEFT, LwheelSpeed, CHANGE);    //init the interrupt mode for the digital pin 2
   attachInterrupt(RIGHT, RwheelSpeed, CHANGE);   //init the interrupt mode for the digital pin 3
   
@@ -317,8 +317,8 @@ void get_messages_from_serial()
           //Serial.println(listen_r+7);
           //Serial.println(listen_l+7);
 
-          right.publish(&right_wheel);
-          left.publish(&left_wheel);
+          right.publish( &right_wheel );
+          left.publish( &left_wheel );
           break;
 
         }
