@@ -28,7 +28,7 @@ while true; do
         echo "OK! (This might take a while :P)"
         cd ~/catkin_ws
         rosinstall_generator robot $command --rosdistro noetic --deps --wet-only --tar > noetic-custom_ros.rosinstall &&
-        wstool merge -t src melodic-custom_ros.rosinstall &&
+        wstool merge -t src noetic-custom_ros.rosinstall &&
         wstool update -t src &&
         rosdep install --from-paths src --ignore-src --rosdistro noetic -y -r --os=debian:buster &&
         sudo ./src/catkin/bin/catkin_make_isolated --install -DCMAKE_BUILD_TYPE=Release --install-space /opt/ros/noetic
