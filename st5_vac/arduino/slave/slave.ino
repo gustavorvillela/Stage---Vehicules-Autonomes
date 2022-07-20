@@ -76,10 +76,10 @@ bool is_connected = false; ///< True if the connection with the master is availa
 void setup()
 {
   nh.initNode();
-  nh.advertise(right);
-  nh.advertise(left);
   nh.subscribe(sub_right);
   nh.subscribe(sub_left);
+  nh.advertise(right);
+  nh.advertise(left);
   frontServo.attach(frontPin);
   frontServo.write(pos);
   backServo.attach(backPin);
@@ -104,8 +104,8 @@ void setup()
   while(!is_connected)
   {
     write_order(HELLO);
-    wait_for_bytes(1, 1000);
-    get_messages_from_serial();
+    // wait_for_bytes(1, 1000);
+    // get_messages_from_serial();
   }
 
 }
@@ -133,13 +133,16 @@ int MeasureDistance(){        // a low pull on pin COMP/TRIG  triggering a senso
 
 void loop()
 {
-  get_messages_from_serial();
-  update_motors_orders();
+  // get_messages_from_serial();
   //right_wheel.data = motor_speed_right;
   //left_wheel.data = motor_speed_left;
   right_wheel.data = right_test;
   left_wheel.data = left_test;
-          
+
+  right.publish( &right_wheel );
+  left.publish( &left_wheel );
+
+  update_motors_orders();         
   
           
   nh.spinOnce();
@@ -317,8 +320,6 @@ void get_messages_from_serial()
           //Serial.println(listen_r+7);
           //Serial.println(listen_l+7);
 
-          right.publish( &right_wheel );
-          left.publish( &left_wheel );
           break;
 
         }

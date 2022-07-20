@@ -55,6 +55,8 @@ def main():
     print("Enter h to get the list of valid commands")
     cmd_str = ''
     while cmd_str != 'q' and not rospy.is_shutdown():
+        right.publish(motor_speed)
+        left.publish(motor_speed)
         cmd_str = input("Enter your command: ")
         process_cmd(cmd_str)
     
@@ -273,9 +275,10 @@ def process_cmd(cmd):
             elif ll_listen != motor_speed:
                 loss.append(ll_listen)
             time.sleep(0.1)
-        right.publish(0)
-        left.publish(0)
-        motor_speed = 70
+        motor_speed = 0
+        right.publish(motor_speed)
+        left.publish(motor_speed)
+        
         print("% of lost packets: " + str(len(loss)*100/total) + "% for "+str(total)+" packets")
     else:
         print("Invalid command")
