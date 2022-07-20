@@ -13,7 +13,7 @@
 #define LEFT 0
 #define RIGHT 1
 
-ros::NodeHandle_<ArduinoHardware, 4, 4, 280, 280> nh;
+ros::NodeHandle_<ArduinoHardware, 5, 5, 300, 300> nh;
 
 std_msgs::Int8 right_wheel;
 std_msgs::Int8 left_wheel;
@@ -75,6 +75,9 @@ bool is_connected = false; ///< True if the connection with the master is availa
 
 void setup()
 {
+  //Serial.begin(SERIAL_BAUD);
+  nh.getHardware()->setBaud(SERIAL_BAUD);
+
   nh.initNode();
   nh.subscribe(sub_right);
   nh.subscribe(sub_left);
@@ -85,7 +88,6 @@ void setup()
   backServo.attach(backPin);
   backServo.write(pos);
   // Init Serial
-  //Serial.begin(SERIAL_BAUD);
   attachInterrupt(LEFT, LwheelSpeed, CHANGE);    //init the interrupt mode for the digital pin 2
   attachInterrupt(RIGHT, RwheelSpeed, CHANGE);   //init the interrupt mode for the digital pin 3
   
@@ -146,7 +148,7 @@ void loop()
   
           
   nh.spinOnce();
-  //delay(2);
+  delay(10);
           
   
 }

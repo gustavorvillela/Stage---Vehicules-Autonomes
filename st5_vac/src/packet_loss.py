@@ -38,7 +38,7 @@ emptyException = queue.Empty
 fullException = queue.Full
 serial_file = None
 camera = PiCamera()
-motor_speed = 70
+motor_speed = 0
 step_length = 1
 
 lr_listen = motor_speed
@@ -57,6 +57,8 @@ def main():
     while cmd_str != 'q' and not rospy.is_shutdown():
         right.publish(motor_speed)
         left.publish(motor_speed)
+        rospy.Subscriber("arduino_raspi_right", Int8, callbackRight)
+        rospy.Subscriber("arduino_raspi_left", Int8, callbackLeft)
         cmd_str = input("Enter your command: ")
         process_cmd(cmd_str)
     
