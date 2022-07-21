@@ -8,44 +8,64 @@
 #include <Metro.h>
 #include <ros.h>
 #include <std_msgs/Int8.h>
+#include <std_msgs/Int8MultiArray.h>
+#include <std_msgs/String.h>
 #define USE_USBCON
 
 #define LEFT 0
 #define RIGHT 1
 
-ros::NodeHandle_<ArduinoHardware, 5, 5, 300, 300> nh;
+ros::NodeHandle nh;
 
-std_msgs::Int8 right_wheel;
-std_msgs::Int8 left_wheel;
+//std_msgs::Int8 right_wheel;
+std_msgs::Int8MultiArray wheels;
 
-ros::Publisher right("arduino_raspi_right", &right_wheel);
-ros::Publisher left("arduino_raspi_left", &left_wheel);
+//ros::Publisher right("arduino_raspi_right", &right_wheel);
+ros::Publisher resp("arduino_raspi", &wheels);
 
-int8_t right_test;
-int8_t left_test;
+
+//int8_t right_test;
+//int8_t left_test;
 int8_t motor_speed_right = 0;
 int8_t motor_speed_left = 0;
 
-void rightCB( const std_msgs::Int8& right_speed){
+//void rightCB( const std_msgs::Int8 &right_speed){
   
   //motor_speed_right = right_speed.data;
-  right_test = right_speed.data;
+//  right_wheel.data = right_speed.data;
+  //right.publish( &right_wheel );
   
-  
-}  
+//}  
 
-void leftCB( const std_msgs::Int8& left_speed){
+void motorCB( const std_msgs::Int8MultiArray &motor_speed){
   
   //motor_speed_left = left_speed.data;
-  left_test = left_speed.data;
-  
+  wheels = motor_speed;
+  resp.publish( &wheels );
 } 
 
-ros::Subscriber<std_msgs::Int8> sub_right("raspi_arduino_right",rightCB);
-ros::Subscriber<std_msgs::Int8> sub_left("raspi_arduino_left",leftCB);
+//ros::Subscriber<std_msgs::Int8> sub_right("raspi_arduino_right",rightCB);
+ros::Subscriber<std_msgs::Int8MultiArray> sub("raspi_arduino",motorCB);
+
+//void commCB( const std_msgs::String &comm){
+//
+//  if (String(comm.data) == String("test"))
+//  {
+//    //Serial.flush();
+//    //right.publish( &right_wheel );
+//    //left.publish( &left_wheel );
+//
+//  }
+//  else
+//  {
+//    //Serial.flush();
+//    right.publish( 0 );
+//    left.publish( 0 );  
+//  }
+//}
 
 
-
+//ros::Subscriber<std_msgs::String> command("comm",commCB);
 
 int coder[2] = {
   0,0};
@@ -70,7 +90,6 @@ bool is_connected = false; ///< True if the connection with the master is availa
 
 
 
-//int callback[100] = {0}; // freezes arduino connection if too big
 
 
 void setup()
@@ -79,10 +98,14 @@ void setup()
   nh.getHardware()->setBaud(115200);
 
   nh.initNode();
-  nh.subscribe(sub_right);
-  nh.subscribe(sub_left);
-  nh.advertise(right);
-  nh.advertise(left);
+  
+  //nh.subscribe(command);
+  //nh.subscribe(sub_right);
+  nh.subscribe(sub);
+  
+  
+  //nh.advertise(right);
+  nh.advertise(resp);
 
   frontServo.attach(frontPin);
   frontServo.write(pos);
@@ -139,12 +162,7 @@ void loop()
   // get_messages_from_serial();
   //right_wheel.data = motor_speed_right;
   //left_wheel.data = motor_speed_left;
-  right_wheel.data = right_test;
-  left_wheel.data = left_test;
-
-  right.publish( &right_wheel );
-  left.publish( &left_wheel );
-
+  
   update_motors_orders();         
   
           

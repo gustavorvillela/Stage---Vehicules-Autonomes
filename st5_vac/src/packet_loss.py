@@ -13,7 +13,7 @@
 from __future__ import division, print_function
 
 import rospy
-from std_msgs.msg import Float32, Int8
+from std_msgs.msg import Float32, Int8, String,Int8MultiArray
 
 import logging
 import signal
@@ -44,8 +44,11 @@ step_length = 1
 lr_listen = motor_speed
 ll_listen = motor_speed
 
-right = rospy.Publisher('raspi_arduino_right',Int8, queue_size=10)
-left = rospy.Publisher('raspi_arduino_left',Int8, queue_size=10)
+#right = rospy.Publisher('raspi_arduino_right',Int8, queue_size=10)
+#left = rospy.Publisher('raspi_arduino_left',Int8, queue_size=10)
+motor_command = rospy.Publisher('raspi_arduino',Int8MultiArray,queue_size=10)
+command = rospy.Publisher('comm',String,queue_size=10)
+
 
 def main():
     test_camera()
@@ -54,11 +57,12 @@ def main():
     print("Press enter to validate your commands")
     print("Enter h to get the list of valid commands")
     cmd_str = ''
+    rospy.Subscriber("arduino_raspi", Int8MultiArray, callback)
     while cmd_str != 'q' and not rospy.is_shutdown():
-        right.publish(motor_speed)
-        left.publish(motor_speed)
-        rospy.Subscriber("arduino_raspi_right", Int8, callbackRight)
-        rospy.Subscriber("arduino_raspi_left", Int8, callbackLeft)
+        #right.publish(motor_speed)
+        #left.publish(motor_speed)
+        #rospy.Subscriber("arduino_raspi_right", Int8, callbackRight)
+        #rospy.Subscriber("arduino_raspi_left", Int8, callbackLeft)
         cmd_str = input("Enter your command: ")
         process_cmd(cmd_str)
     
@@ -181,7 +185,7 @@ def process_cmd(cmd):
     elif cmd_type["[lb] left step back"]:
         print("Backward left at " + str(motor_speed) + "%...")
         write_order(serial_file, Order.MOTOR)
-        write_i8(serial_file, 0) #valeur moteur droit
+        write_i8(serial_file, 0) #valeur moteur droit0.
         write_i8(serial_file, -motor_speed) #valeur moteur gauche
         time.sleep(step_length)
         print('stop motors')
@@ -266,22 +270,26 @@ def process_cmd(cmd):
         motor_speed=50
         loss = []
         total = 10
+        rate = rospy.Rate(10)
+        sent = Int8MultiArray()
         for i in range(total):
+            command.publish("test")
             motor_speed = motor_speed - 1
-            right.publish(motor_speed)
-            left.publish(motor_speed)
-            rospy.Subscriber("arduino_raspi_right", Int8, callbackRight)
-            rospy.Subscriber("arduino_raspi_left", Int8, callbackLeft)
+            sent.data = [motor_speed, motor_speed]
+            #rospy.loginfo(sent)
+            motor_command.publish(sent)
             if lr_listen != motor_speed:
                 loss.append(lr_listen)
             elif ll_listen != motor_speed:
                 loss.append(ll_listen)
-            time.sleep(0.1)
+            rate.sleep()
+
         motor_speed = 0
-        right.publish(motor_speed)
-        left.publish(motor_speed)
-        
+        sent.data = [0,0]
+        motor_command.publish(sent)
         print("% of lost packets: " + str(len(loss)*100/total) + "% for "+str(total)+" packets")
+        command.publish("stop")
+
     else:
         print("Invalid command")
 
@@ -368,19 +376,20 @@ def testArduino(motor_speed):
             pass
     return lr,ll
 
-def callbackRight(lr):
+def callback(listen):
 
-    global lr_listen
-    lr_listen = lr
-    print("Right wheel: ",lr)
-
+    global lr_listen, ll_listen
+    lr_listen = listen.data[0]
+    ll_listen = listen.data[1]
+    print("Right wheel: ",lr_listen)
+    print("Left wheel: ",ll_listen,"\n")
 
 
 def callbackLeft(ll):
 
     global ll_listen
-    ll_listen = ll
-    print("Left wheel: ",ll,"\n")
+    ll_listen = ll.data
+    
 
 
 if __name__ == "__main__":

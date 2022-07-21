@@ -16,5 +16,5 @@ MAX_HEIGHT = CAMERA_RESOLUTION[1]
 
 
 
-BAUDRATE = 115200  # Communication with the Arduino
+BAUDRATE = 9600  # Communication with the Arduino
 
