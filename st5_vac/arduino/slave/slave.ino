@@ -26,7 +26,7 @@ int8_t left_test;
 int8_t motor_speed_right = 0;
 int8_t motor_speed_left = 0;
 
-void rightCB( const std_msgs::Int8 &right_speed){
+void rightCB( const std_msgs::Int8& right_speed){
   
   //motor_speed_right = right_speed.data;
   right_test = right_speed.data;
@@ -34,7 +34,7 @@ void rightCB( const std_msgs::Int8 &right_speed){
   
 }  
 
-void leftCB( const std_msgs::Int8 &left_speed){
+void leftCB( const std_msgs::Int8& left_speed){
   
   //motor_speed_left = left_speed.data;
   left_test = left_speed.data;
@@ -83,15 +83,16 @@ void setup()
   nh.subscribe(sub_left);
   nh.advertise(right);
   nh.advertise(left);
+
   frontServo.attach(frontPin);
   frontServo.write(pos);
   backServo.attach(backPin);
   backServo.write(pos);
-  // Init Serial
+
   attachInterrupt(LEFT, LwheelSpeed, CHANGE);    //init the interrupt mode for the digital pin 2
   attachInterrupt(RIGHT, RwheelSpeed, CHANGE);   //init the interrupt mode for the digital pin 3
   
-  SensorSetup();
+  //SensorSetup();
 
   // Init Motor
   pinMode(SPEED_LEFT, OUTPUT);
@@ -103,12 +104,12 @@ void setup()
   
 
   // Wait until the arduino is connected to master
-  while(!is_connected)
-  {
-    write_order(HELLO);
-    // wait_for_bytes(1, 1000);
-    // get_messages_from_serial();
-  }
+  //while(!is_connected)
+  //{
+  //  write_order(HELLO);
+  //  // wait_for_bytes(1, 1000);
+  //  // get_messages_from_serial();
+  //}
 
 }
 
