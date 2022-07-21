@@ -76,7 +76,7 @@ bool is_connected = false; ///< True if the connection with the master is availa
 void setup()
 {
   //Serial.begin(SERIAL_BAUD);
-  nh.getHardware()->setBaud(SERIAL_BAUD);
+  nh.getHardware()->setBaud(115200);
 
   nh.initNode();
   nh.subscribe(sub_right);
