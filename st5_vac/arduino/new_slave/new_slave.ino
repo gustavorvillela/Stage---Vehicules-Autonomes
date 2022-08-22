@@ -55,7 +55,7 @@ ros::Subscriber<std_msgs::String> command("comm",commCB);
 
 void setup() {
 
-  nh.getHardware()->setBaud(9600);
+  nh.getHardware()->setBaud(115200);
 
   nh.initNode();
   

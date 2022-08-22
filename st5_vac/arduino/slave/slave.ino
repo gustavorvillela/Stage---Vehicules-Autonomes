@@ -39,9 +39,11 @@ int8_t motor_speed_left = 0;
 
 void motorCB( const std_msgs::Int8MultiArray &motor_speed){
   
-  //motor_speed_left = left_speed.data;
   wheels = motor_speed;
   resp.publish( &wheels );
+  motor_speed_right = motor_speed.data[0];
+  motor_speed_left = motor_speed.data[1];
+  
 } 
 
 //ros::Subscriber<std_msgs::Int8> sub_right("raspi_arduino_right",rightCB);

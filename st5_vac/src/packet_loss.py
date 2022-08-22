@@ -43,6 +43,8 @@ step_length = 1
 
 lr_listen = motor_speed
 ll_listen = motor_speed
+sent = Int8MultiArray()
+loss = []
 
 #right = rospy.Publisher('raspi_arduino_right',Int8, queue_size=10)
 #left = rospy.Publisher('raspi_arduino_left',Int8, queue_size=10)
@@ -266,30 +268,25 @@ def process_cmd(cmd):
         #    print("Mean bit lost: ",sum(lresp)/total)
     elif cmd_type["[t]est motor msgs"]:
         print("Spinning motors...\n")
-        global lr_listen, ll_listen
+        global lr_listen, ll_listen, sent, loss
         motor_speed=50
         loss = []
         total = 10
         rate = rospy.Rate(10)
-        sent = Int8MultiArray()
         for i in range(total):
             command.publish("test")
             motor_speed = motor_speed - 1
             sent.data = [motor_speed, motor_speed]
             #rospy.loginfo(sent)
             motor_command.publish(sent)
-            if lr_listen != motor_speed:
-                loss.append(lr_listen)
-            elif ll_listen != motor_speed:
-                loss.append(ll_listen)
             rate.sleep()
 
         motor_speed = 0
         sent.data = [0,0]
         motor_command.publish(sent)
-        print("% of lost packets: " + str(len(loss)*100/total) + "% for "+str(total)+" packets")
+        print("% of lost packets: " + str(len(loss)*100/total) + "% for "+str(total)+" packets\n")
         command.publish("stop")
-
+        rate.sleep()
     else:
         print("Invalid command")
 
@@ -378,9 +375,13 @@ def testArduino(motor_speed):
 
 def callback(listen):
 
-    global lr_listen, ll_listen
+    global lr_listen, ll_listen,sent,loss
     lr_listen = listen.data[0]
     ll_listen = listen.data[1]
+    if lr_listen != motor_speed:
+        loss.append(lr_listen)
+    elif ll_listen != motor_speed:
+        loss.append(ll_listen)
     print("Right wheel: ",lr_listen)
     print("Left wheel: ",ll_listen,"\n")
 
