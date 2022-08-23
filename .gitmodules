@@ -1,3 +1,6 @@
 [submodule "rosserial"]
 	path = rosserial
 	url = https://github.com/ros-drivers/rosserial.git
+[submodule "raspicam_node"]
+	path = raspicam_node
+	url = https://github.com/UbiquityRobotics/raspicam_node.git

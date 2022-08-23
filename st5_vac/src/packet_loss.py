@@ -24,6 +24,10 @@ from time import sleep
 from picamera import PiCamera
 import struct
 import random
+import sys
+import cv2
+from sensor_msgs.msg import Image,CompressedImage
+from cv_bridge import CvBridge, CvBridgeError
 
 try:
     import queue
@@ -37,7 +41,7 @@ from constants import BAUDRATE
 emptyException = queue.Empty
 fullException = queue.Full
 serial_file = None
-camera = PiCamera()
+#camera = PiCamera()
 motor_speed = 0
 step_length = 1
 
@@ -50,15 +54,17 @@ loss = []
 #left = rospy.Publisher('raspi_arduino_left',Int8, queue_size=10)
 motor_command = rospy.Publisher('raspi_arduino',Int8MultiArray,queue_size=10)
 command = rospy.Publisher('comm',String,queue_size=10)
+image_pub = rospy.Publisher('filtered/compressed',CompressedImage,queue_size=10)
 
 
 def main():
-    test_camera()
+    #test_camera()
     #connect_to_arduino()
     print("Welcome to packet_loss.py")
     print("Press enter to validate your commands")
     print("Enter h to get the list of valid commands")
     cmd_str = ''
+    rospy.Subscriber("raspicam_node/image/compressed",CompressedImage,im_callback)
     rospy.Subscriber("arduino_raspi", Int8MultiArray, callback)
     while cmd_str != 'q' and not rospy.is_shutdown():
         #right.publish(motor_speed)
@@ -68,7 +74,7 @@ def main():
         cmd_str = input("Enter your command: ")
         process_cmd(cmd_str)
     
-    camera.close()
+    #camera.close()
 
 
 def test_camera():
@@ -391,7 +397,36 @@ def callbackLeft(ll):
     global ll_listen
     ll_listen = ll.data
     
+def im_callback(im):
 
+    global image_pub
+
+    '''Callback function of subscribed topic. 
+    Here images get converted and features detected'''
+   
+#### direct conversion to CV2 ####
+    np_arr = np.frombuffer(im.data, np.uint8)
+    #image_np = cv2.imdecode(np_arr, cv2.CV_LOAD_IMAGE_COLOR)
+    image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR) # OpenCV >= 3.0:
+    kernel = np.ones((5, 5), np.uint8)
+
+# convert np image to grayscale
+    gray = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
+
+
+    #gray = cv2.erode(gray, kernel, iterations=1)
+    #gray = cv2.dilate(gray, kernel, iterations=1)
+
+    gray = cv2.Canny(gray, 50, 150, apertureSize=3)
+
+   
+#### Create CompressedIamge ####
+    msg = CompressedImage()
+    msg.header.stamp = rospy.Time.now()
+    msg.format = "jpeg"
+    msg.data = np.array(cv2.imencode('.jpg', gray)[1]).tobytes()
+    # Publish new image
+    image_pub.publish(msg)
 
 if __name__ == "__main__":
     try:
