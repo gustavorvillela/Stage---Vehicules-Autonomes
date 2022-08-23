@@ -1,9 +1,20 @@
+#!/usr/bin/env python3
+
+from __future__ import division, print_function
+
+import rospy
+
+import cv2
+import sys
+
+from sensor_msgs.msg import Image,CompressedImage
 
 
 class Imager:
 
     def __init__(self):
 
+        # Initializing publisher and subscriber
         self.image_pub = rospy.Publisher('filtered/compressed',CompressedImage,queue_size=10)
         self.camera_sub = rospy.Subscriber("raspicam_node/image/compressed",CompressedImage,im_callback)
 
@@ -37,3 +48,11 @@ class Imager:
         msg.data = np.array(cv2.imencode('.jpg', gray)[1]).tobytes()
         # Publish new image
         self.image_pub.publish(msg)
+
+if __name__ == "__main__":
+    try:
+        rospy.init_node('image_proc', anonymous=True)
+        imag = Imager()
+        rospy.spin()
+    except rospy.ROSInterruptException:
+        pass

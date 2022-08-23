@@ -4,8 +4,6 @@ from __future__ import division, print_function
 
 import rospy
 from std_msgs.msg import Float32, Int8, String,Int8MultiArray
-from sensor_msgs.msg import Image,CompressedImage
-import cv2
 import sys
 
 
@@ -25,11 +23,11 @@ class Dialogue:
     #===============================================================================================
         
         # Topics where we publish
-        self.motor_command = motor_command = rospy.Publisher('raspi_arduino',Int8MultiArray,queue_size=10)
+        self.motor_command = rospy.Publisher('raspi_arduino',Int8MultiArray,queue_size=10)
         self.command = rospy.Publisher('comm',String,queue_size=10)
 
         # topics where to subscribe
-        self.arduino_sub = rospy.Subscriber("arduino_raspi", Int8MultiArray, callback)
+        self.arduino_sub = rospy.Subscriber("arduino_raspi", Int8MultiArray, motorCallback)
         
         # Motor attributes
         self.motor_speed = motor_speed
@@ -41,6 +39,28 @@ class Dialogue:
         self.lr_listen = self.motor_speed
         self.ll_listen = self.motor_speed
         self.sent = Int8MultiArray()
+
+    #===============================================================================================
+    # Callback functions
+    #===============================================================================================
+    
+    # Motor callback
+    def motorCallback(listen):
+
+        global sent,loss
+        self.lr_listen = listen.data[0]
+        self.ll_listen = listen.data[1]
+        if self.lr_listen != self.motor_speed:
+            self.loss.append(self.lr_listen)
+        elif self.ll_listen != self.motor_speed:
+            self.loss.append(self.ll_listen)
+        print("Right wheel: ",self.lr_listen)
+        print("Left wheel: ",self.ll_listen,"\n")
+
+
+    #===============================================================================================
+    # Motor command function
+    #===============================================================================================
 
     def process_cmd(cmd):
 
@@ -170,74 +190,41 @@ class Dialogue:
             lresp = []
             total = 100
             bits = 16
-            #refb = "{:016b}".format(ref)
-            #ref = "General Kenobi !"
-            #refb = ' '.join(format(i,'08b') for i in bytearray(ref,encoding='utf-8'))
-            #refb = refb.replace(" ","")
-            #print(refl," bits")
             print("Hello there...")
             for i in range(total):
                 while True:
                     ref = random.getrandbits(bits)
                     if ref < 32767:
                         break
-                   # else:
-                   #     print(ref)
-                #print("ref: ",ref)
                 resp = listenArduino(ref)
-                #respl = resp.bit_length()
-                #print(resp)
-                #respb = ' '.join(format(i,'08b') for i in bytearray(resp,encoding='utf-8'))
-                #respb = respb.replace(" ","")
-                #respb = "{:032b}".format(resp)
                 if resp != ref:
-                   #bit_diff = refl - respl
                    lresp.append(resp)
             print("% of lost packets: " + str(len(lresp)*100/total) + "% for "+str(total)+" packets")
-            #if len(lresp) != 0:
-            #    print("Mean bit lost: ",sum(lresp)/total)
         elif cmd_type["[t]est motor msgs"]:
+
             print("Spinning motors...\n")
-            global lr_listen, ll_listen, sent, loss
-            motor_speed=50
-            loss = []
+            self.loss = []
+            self.motor_speed = 50
             total = 10
             rate = rospy.Rate(10)
+
             for i in range(total):
-                command.publish("test")
-                motor_speed = motor_speed - 1
-                sent.data = [motor_speed, motor_speed]
-                #rospy.loginfo(sent)
-                motor_command.publish(sent)
+
+                self.command.publish("test")
+                self.sent.data = [self.motor_speed, self.motor_speed]
+                self.motor_command.publish(self.sent)
+                self.motor_speed = self.motor_speed - 1
+
                 rate.sleep()
     
-            motor_speed = 0
-            sent.data = [0,0]
-            motor_command.publish(sent)
-            print("% of lost packets: " + str(len(loss)*100/total) + "% for "+str(total)+" packets\n")
-            command.publish("stop")
+            self.motor_speed = 0
+            self.sent.data = [0,0]
+            self.motor_command.publish(self.sent)
+            print("% of lost packets: " + str(len(self.loss)*100/total) + "% for "+str(total)+" packets\n")
+            self.command.publish("stop")
             rate.sleep()
         else:
             print("Invalid command")
-
-
-
-    #===============================================================================================
-    # Callback functions
-    #===============================================================================================
-    
-    # Motor callback
-    def callback(listen):
-
-        global sent,loss
-        self.lr_listen = listen.data[0]
-        self.ll_listen = listen.data[1]
-        if self.lr_listen != self.motor_speed:
-            self.loss.append(self.lr_listen)
-        elif self.ll_listen != self.motor_speed:
-            self.loss.append(self.ll_listen)
-        print("Right wheel: ",self.lr_listen)
-        print("Left wheel: ",self.ll_listen,"\n")
 
 
 def main():
