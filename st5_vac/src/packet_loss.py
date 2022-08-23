@@ -381,7 +381,7 @@ def testArduino(motor_speed):
 
 def callback(listen):
 
-    global lr_listen, ll_listen,sent,loss
+    global lr_listen, ll_listen,sent,loss,motor_speed
     lr_listen = listen.data[0]
     ll_listen = listen.data[1]
     if lr_listen != motor_speed:
