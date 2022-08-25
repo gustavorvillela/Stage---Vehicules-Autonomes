@@ -17,7 +17,7 @@ import random
 
 class Dialogue:
 
-    def __init__(self, motor_speed=50, step_length=2):
+    def __init__(self, motor_speed=60, step_length=2):
 
     #===============================================================================================
     # Initialize ros publisher, ros subscriber
@@ -38,7 +38,8 @@ class Dialogue:
         self.step_length = step_length
         self.encoder = Int8MultiArray()
         self.motor = Int8MultiArray()
-        self.arduino = Arduino()
+        self.servo = Int8()
+        self.arduino = Ardata()
 
 
         # Communication attributes
@@ -114,12 +115,15 @@ class Dialogue:
             print("Speed set to " + cmd + "%")
         elif cmd_type["[f]orward step"]:
             print("Moving forward at " + str(self.motor_speed) + "%...")
+            self.arduino.command = 0
             self.motor.data = [self.motor_speed, self.motor_speed]
-            self.motor_command.publish(self.motor)
+            #self.motor_command.publish(self.motor)
+            self.update_motor()
             time.sleep(self.step_length)
             print('stop motors')
             self.motor.data = [0,0]
-            self.motor_command.publish(self.motor)
+            self.update_motor()
+            #self.motor_command.publish(self.motor)
         elif cmd_type["[l] left step"]:
             print("Forward left at " + str(self.motor_speed) + "%...")
             self.motor.data[0] = 0 #valeur moteur droit
@@ -187,39 +191,52 @@ class Dialogue:
         elif cmd_type["[p]ause motors"]:
             print("Stopping...")
             self.motor.data = [0,0]
-            self.motor_command.publish(self.motor)
+            #self.motor_command.publish(self.motor)
+            self.update_motor()
         elif cmd_type["[s]ervo move"]:
             print("Moving front servo...")
-            self.servo_command.publish(45)
+            #self.servo_command.publish(45)
+            self.servo.data = 45
+            self.arduino.servo = self.servo
+            self.arduino.command = 2
+            self.data.publish(self.arduino)
             time.sleep(2)
-            self.servo_command.publish(90)
+            self.servo.data = 90
+            self.arduino.servo = self.servo
+            self.data.publish(self.arduino)
+            #self.servo_command.publish(90)
         elif cmd_type["[t]est motor msgs"]:
 
             print("Spinning motors...\n")
             self.loss = []
             self.motor_speed = 50
             total = 10
-            rate = rospy.Rate(10)
+            rate = rospy.Rate(1)
+            self.arduino.command = 0
 
             for i in range(total):
 
                 self.motor.data = [self.motor_speed, self.motor_speed]
-                self.arduino.motor = self.motor
                 #self.motor_command.publish(self.motor)
-                self.data.publish(self.arduino)
+                self.update_motor()
                 self.motor_speed = self.motor_speed - 1
                 rate.sleep()
     
             self.motor_speed = 0
             self.motor.data = [self.motor_speed, self.motor_speed]
-            self.arduino.motor = self.motor
             #self.motor_command.publish(self.motor)
-            self.data.publish(self.arduino)
+            self.update_motor()
             print("% of lost packets: " + str((1-len(self.loss)/total)*100) + "% for "+str(total)+" packets\n")
+            self.motor_speed = 60
             rate.sleep()
         else:
             print("Invalid command")
 
+    def update_motor(self):
+
+        self.arduino.motor = self.motor
+        print(self.arduino.motor.data)
+        self.data.publish(self.arduino)
 
 #===============================================================================================
 # Main function for input acquisition
@@ -228,9 +245,9 @@ class Dialogue:
 def main():
 
     diag = Dialogue()
-    diag.motor.data = [diag.motor_speed, diag.motor_speed]
-    diag.servo.data = 90
-    diag.encoder.data = [0,0]
+    diag.arduino.motor.data = [diag.motor_speed, diag.motor_speed]
+    diag.arduino.servo.data = 90
+    diag.arduino.encoder.data = [0,0]
 
     print("Press enter to validate your commands")
     print("Enter h to get the list of valid commands")

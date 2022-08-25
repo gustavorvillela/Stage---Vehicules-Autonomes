@@ -6,7 +6,6 @@
 #include "parameters.h"
 #include <Servo.h>
 #include <ros.h> //ros_lib
-#include <std_msgs/Int8.h>
 #include <std_msgs/Int8MultiArray.h>
 #include <std_msgs/String.h>
 #include <arduino_msgs/Ardata.h>
@@ -36,12 +35,11 @@ int8_t motor_speed_left = 0;
 // Defining ROS variables
 //************************
 
-ros::NodeHandle nh; //ROS node
+ros::NodeHandle_<ArduinoHardware,2,2,150,150> nh; //ROS node
 
 //Starting messages
 std_msgs::Int8MultiArray wheels;
 std_msgs::Int8MultiArray encoder;
-std_msgs::Int8 servo;
 
 //Defining publisher objects
 ros::Publisher mot("/arduino/motor", &wheels);
@@ -51,47 +49,13 @@ ros::Publisher enc("/arduino/encoder", &encoder);
 // Callback functions
 //************************
 
-// Motor callback
-//void motorCB( const std_msgs::Int8MultiArray &motor_speed){
-//  
-//  wheels = motor_speed;
-//  mot.publish( &wheels );
-//  motor_speed_right = motor_speed.data[0];
-//  motor_speed_left = motor_speed.data[1];
-//  
-//} 
-//
-//// Servo callback
-//void servoCB( const std_msgs::Int8 &servo_angle){
-//
-//  pos = servo_angle.data;
-//  frontServo.write(pos);
-//  
-//} 
-//
-//
-//
-//// Encoder callback
-//void encoderCB( const std_msgs::Int8MultiArray &encoder_speed){
-//
-//  int8_t right;
-//  int8_t left;
-//  right = encoder_speed.data[0];
-//  left = encoder_speed.data[1];
-//
-//  coder[LEFT] = left;
-//  coder[RIGHT] = right;
-//
-//  
-//  
-//} 
 
 void commCB( const arduino_msgs::Ardata &arduino){
 
   int8_t right;
   int8_t left;
 
-  if (arduino.command == "motor")
+  if (arduino.command == 0)
   {
     //Motor callback
   
@@ -101,7 +65,7 @@ void commCB( const arduino_msgs::Ardata &arduino){
     motor_speed_left = arduino.motor.data[1];
     
   }
-  else if (arduino.command == "encoder")
+  else if (arduino.command == 1)
   {
     //Encoder callback
     right = arduino.encoder.data[0];
@@ -109,8 +73,10 @@ void commCB( const arduino_msgs::Ardata &arduino){
 
     coder[LEFT] = left;
     coder[RIGHT] = right;
+
+    update_encoder();
   }
-  else if (arduino.command == "servo")
+  else if (arduino.command == 2)
   {
     //Servo callback
     pos = arduino.servo.data;
@@ -120,21 +86,15 @@ void commCB( const arduino_msgs::Ardata &arduino){
 } 
 
 //Defining subscriber objects
-//ros::Subscriber<std_msgs::Int8MultiArray> motor_sub("/raspi/motor",motorCB);
-//ros::Subscriber<std_msgs::Int8MultiArray> enc_sub("/raspi/encoder",encoderCB);
-//ros::Subscriber<std_msgs::Int8> servo_sub("/raspi/servo",servoCB);
 ros::Subscriber<arduino_msgs::Ardata> arduino_sub("/raspi/commands",commCB);
 
 
 void setup() {
 
-  nh.getHardware()->setBaud(57600);
+  nh.getHardware()->setBaud(115200);
 
   nh.initNode();
-  
-//  nh.subscribe(motor_sub);
-//  nh.subscribe(enc_sub);
-//  nh.subscribe(servo_sub);
+
   nh.subscribe(arduino_sub);
   
   nh.advertise(mot);
@@ -161,10 +121,9 @@ void setup() {
 
 void loop() {
   
-  update_motors_orders();
-  update_encoder();        
+  update_motors_orders();        
   nh.spinOnce();
-  delay(20);
+  delay(10);
 }
 
 void update_encoder()
