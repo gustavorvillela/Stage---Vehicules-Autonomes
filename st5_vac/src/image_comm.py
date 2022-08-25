@@ -6,6 +6,7 @@ import rospy
 
 import cv2
 import sys
+import numpy as np
 
 from sensor_msgs.msg import Image,CompressedImage
 
@@ -16,11 +17,11 @@ class Imager:
 
         # Initializing publisher and subscriber
         self.image_pub = rospy.Publisher('filtered/compressed',CompressedImage,queue_size=10)
-        self.camera_sub = rospy.Subscriber("raspicam_node/image/compressed",CompressedImage,im_callback)
+        self.camera_sub = rospy.Subscriber("raspicam_node/image/compressed",CompressedImage,self.im_callback)
 
 
     # Image callback exemple 
-    def im_callback(im):
+    def im_callback(self,im):
 
         '''Callback function of subscribed topic. 
         Here images get converted and edges detected'''

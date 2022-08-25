@@ -17,25 +17,12 @@
 
 ros::NodeHandle nh;
 
-//std_msgs::Int8 right_wheel;
 std_msgs::Int8MultiArray wheels;
 
-//ros::Publisher right("arduino_raspi_right", &right_wheel);
 ros::Publisher resp("arduino_raspi", &wheels);
 
-
-//int8_t right_test;
-//int8_t left_test;
 int8_t motor_speed_right = 0;
 int8_t motor_speed_left = 0;
-
-//void rightCB( const std_msgs::Int8 &right_speed){
-  
-  //motor_speed_right = right_speed.data;
-//  right_wheel.data = right_speed.data;
-  //right.publish( &right_wheel );
-  
-//}  
 
 void motorCB( const std_msgs::Int8MultiArray &motor_speed){
   
@@ -46,28 +33,7 @@ void motorCB( const std_msgs::Int8MultiArray &motor_speed){
   
 } 
 
-//ros::Subscriber<std_msgs::Int8> sub_right("raspi_arduino_right",rightCB);
 ros::Subscriber<std_msgs::Int8MultiArray> sub("raspi_arduino",motorCB);
-
-//void commCB( const std_msgs::String &comm){
-//
-//  if (String(comm.data) == String("test"))
-//  {
-//    //Serial.flush();
-//    //right.publish( &right_wheel );
-//    //left.publish( &left_wheel );
-//
-//  }
-//  else
-//  {
-//    //Serial.flush();
-//    right.publish( 0 );
-//    left.publish( 0 );  
-//  }
-//}
-
-
-//ros::Subscriber<std_msgs::String> command("comm",commCB);
 
 int coder[2] = {
   0,0};

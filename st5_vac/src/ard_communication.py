@@ -4,6 +4,7 @@ from __future__ import division, print_function
 
 import rospy
 from std_msgs.msg import Float32, Int8, String,Int8MultiArray
+from arduino_msgs.msg import Ardata
 import sys
 
 
@@ -16,53 +17,62 @@ import random
 
 class Dialogue:
 
-    def __init__(self, motor_speed=0, step_length=1):
+    def __init__(self, motor_speed=50, step_length=2):
 
     #===============================================================================================
     # Initialize ros publisher, ros subscriber
     #===============================================================================================
         
         # Topics where we publish
-        self.motor_command = rospy.Publisher('raspi_arduino',Int8MultiArray,queue_size=10)
-        self.command = rospy.Publisher('comm',String,queue_size=10)
+        self.motor_command = rospy.Publisher('raspi/motor',Int8MultiArray,queue_size=1)
+        self.servo_command = rospy.Publisher('raspi/servo',Int8,queue_size=1)
+        self.encoder_command = rospy.Publisher('raspi/encoder',Int8MultiArray,queue_size=1)
+        self.data = rospy.Publisher('raspi/commands',Ardata,queue_size=1)
 
         # topics where to subscribe
-        self.arduino_sub = rospy.Subscriber("arduino_raspi", Int8MultiArray, motorCallback)
+        self.motor_sub = rospy.Subscriber("arduino/motor", Int8MultiArray, self.motorCallback)
+        self.encoder_sub = rospy.Subscriber("arduino/encoder", Int8MultiArray, self.encoderCallback)
         
-        # Motor attributes
+        # Actuators attributes
         self.motor_speed = motor_speed
         self.step_length = step_length
+        self.encoder = Int8MultiArray()
+        self.motor = Int8MultiArray()
+        self.arduino = Arduino()
+
 
         # Communication attributes
 
         self.loss = []
-        self.lr_listen = self.motor_speed
-        self.ll_listen = self.motor_speed
-        self.sent = Int8MultiArray()
+        self.motor_listen = [self.motor_speed, self.motor_speed]
+        self.encoder_listen = [0,0]
 
     #===============================================================================================
     # Callback functions
     #===============================================================================================
     
     # Motor callback
-    def motorCallback(listen):
+    def motorCallback(self,motor):
 
-        global sent,loss
-        self.lr_listen = listen.data[0]
-        self.ll_listen = listen.data[1]
-        if self.lr_listen != self.motor_speed:
-            self.loss.append(self.lr_listen)
-        elif self.ll_listen != self.motor_speed:
-            self.loss.append(self.ll_listen)
-        print("Right wheel: ",self.lr_listen)
-        print("Left wheel: ",self.ll_listen,"\n")
+        self.motor_listen = motor.data
+        right = self.motor_listen[0]
+        left = self.motor_listen[1]
+        if right != self.motor_speed:
+            self.loss.append(right)
+        elif left != self.motor_speed:
+            self.loss.append(left)
+        print("Right wheel: ",right)
+        print("Left wheel: ",left,"\n")
 
+    def encoderCallback(self,listen):
+
+        self.encoder.data = listen.data
 
     #===============================================================================================
     # Motor command function
     #===============================================================================================
 
-    def process_cmd(cmd):
+    def process_cmd(self,cmd):
 
         cmd_type = {
           "[q]uit": (cmd == 'q'),
@@ -82,7 +92,6 @@ class Dialogue:
           "[tr] turn right": (cmd == 'tr'),
           "[p]ause motors": (cmd == 'p'),
           "[s]ervo move": (cmd == 's'),
-          "[m]essage arduino": (cmd == 'm'),
           "[t]est motor msgs": (cmd == 't')
                    }
     
@@ -92,114 +101,98 @@ class Dialogue:
             for key in cmd_type.keys():
                 print(key)
         elif cmd_type["[e]ncoder values"]:
-            print('left encoder : ', lectureCodeurGauche())
-            print('right encoder : ', lectureCodeurDroit())
+            print('left encoder : ', self.encoder.data[1] )
+            print('right encoder : ', self.encoder.data[0])
         elif cmd_type["[z]ero setting encoders"]:
             print("Resetting encoders...")
-            write_order(serial_file, Order.RESETENC)
-            print('left encoder : ', lectureCodeurGauche())
-            print('right encoder : ', lectureCodeurDroit())
+            self.encoder.data = [0,0]
+            self.encoder_command.publish(self.encoder)
+            print('left encoder : ', self.encoder.data[1])
+            print('right encoder : ', self.encoder.data[0])
         elif cmd_type["(%) set motor speed percentage"]:
-            motor_speed = int(cmd)
+            self.motor_speed = int(cmd)
             print("Speed set to " + cmd + "%")
         elif cmd_type["[f]orward step"]:
-            print("Moving forward at " + str(motor_speed) + "%...")
-            write_order(serial_file, Order.MOTOR)
-            write_i8(serial_file, motor_speed) #valeur moteur droit
-            write_i8(serial_file, motor_speed) #valeur moteur gauche
-            time.sleep(step_length)
+            print("Moving forward at " + str(self.motor_speed) + "%...")
+            self.motor.data = [self.motor_speed, self.motor_speed]
+            self.motor_command.publish(self.motor)
+            time.sleep(self.step_length)
             print('stop motors')
-            write_order(serial_file, Order.STOP)
+            self.motor.data = [0,0]
+            self.motor_command.publish(self.motor)
         elif cmd_type["[l] left step"]:
-            print("Forward left at " + str(motor_speed) + "%...")
-            write_order(serial_file, Order.MOTOR)
-            write_i8(serial_file, 0) #valeur moteur droit
-            write_i8(serial_file, motor_speed) #valeur moteur gauche
-            time.sleep(step_length)
+            print("Forward left at " + str(self.motor_speed) + "%...")
+            self.motor.data[0] = 0 #valeur moteur droit
+            self.motor.data[1] = self.motor_speed #valeur moteur gauche
+            time.sleep(self.step_length)
             print('stop motors')
-            write_order(serial_file, Order.STOP)
+            self.motor.data = [0,0]
+            self.motor_command.publish(self.motor)
         elif cmd_type["[r] right step"]:
-            print("Forward right at " + str(motor_speed) + "%...")
-            write_order(serial_file, Order.MOTOR)
-            write_i8(serial_file, motor_speed) #valeur moteur droit
-            write_i8(serial_file, 0) #valeur moteur gauche
-            time.sleep(step_length)
+            print("Forward right at " + str(self.motor_speed) + "%...")
+            self.motor.data[0] = self.motor_speed #valeur moteur droit
+            self.motor.data[1] = 0 #valeur moteur gauche
+            time.sleep(self.step_length)
             print('stop motors')
-            write_order(serial_file, Order.STOP)
+            self.motor.data = [0,0]
+            self.motor_command.publish(self.motor)
         elif cmd_type["[b]ackward step"]:
-            print("Moving backward at " + str(motor_speed) + "%...")
-            write_order(serial_file, Order.MOTOR)
-            write_i8(serial_file, -motor_speed) #valeur moteur droit
-            write_i8(serial_file, -motor_speed) #valeur moteur gauche
-            time.sleep(step_length)
+            print("Moving backward at " + str(self.motor_speed) + "%...")
+            self.motor.data = [-self.motor_speed, -self.motor_speed]
+            self.motor_command.publish(self.motor)
+            time.sleep(self.step_length)
             print('stop motors')
-            write_order(serial_file, Order.STOP)
+            self.motor.data = [0,0]
+            self.motor_command.publish(self.motor)
         elif cmd_type["[lb] left step back"]:
-            print("Backward left at " + str(motor_speed) + "%...")
-            write_order(serial_file, Order.MOTOR)
-            write_i8(serial_file, 0) #valeur moteur droit0.
-            write_i8(serial_file, -motor_speed) #valeur moteur gauche
-            time.sleep(step_length)
+            print("Backward left at " + str(self.motor_speed) + "%...")
+            self.motor.data[0] = 0 #valeur moteur droit
+            self.motor.data[1] = -self.motor_speed #valeur moteur gauche
+            time.sleep(self.step_length)
             print('stop motors')
-            write_order(serial_file, Order.STOP)
+            self.motor.data = [0,0]
+            self.motor_command.publish(self.motor)
         elif cmd_type["[rb] right step back"]:
-            print("Backward right at " + str(motor_speed) + "%...")
-            write_order(serial_file, Order.MOTOR)
-            write_i8(serial_file, -motor_speed) #valeur moteur droit
-            write_i8(serial_file, 0) #valeur moteur gauche
-            time.sleep(step_length)
+            print("Backward right at " + str(self.motor_speed) + "%...")
+            self.motor.data[0] = -self.motor_speed #valeur moteur droit
+            self.motor.data[1] = 0 #valeur moteur gauche
+            time.sleep(self.step_length)
             print('stop motors')
-            write_order(serial_file, Order.STOP)
+            self.motor.data = [0,0]
+            self.motor_command.publish(self.motor)
         elif cmd_type["[ff]orward"]:
-            print("Moving forward at " + str(motor_speed) + "%...")
-            write_order(serial_file, Order.MOTOR)
-            write_i8(serial_file, motor_speed) #valeur moteur droit
-            write_i8(serial_file, motor_speed) #valeur moteur gauche
+            print("Moving forward at " + str(self.motor_speed) + "%...")
+            self.motor.data = [self.motor_speed, self.motor_speed]
+            self.motor_command.publish(self.motor)
         elif cmd_type["[bb]ackward"]:
-            print("Moving backward at " + str(motor_speed) + "%...")
-            write_order(serial_file, Order.MOTOR)
-            write_i8(serial_file, -motor_speed) #valeur moteur droit
-            write_i8(serial_file, -motor_speed) #valeur moteur gauche
+            print("Moving backward at " + str(self.motor_speed) + "%...")
+            self.motor.data = [-self.motor_speed, -self.motor_speed]
+            self.motor_command.publish(self.motor)
         elif cmd_type["[tl] turn left"]:
-            print("Turn left at " + str(motor_speed) + "%...")
-            write_order(serial_file, Order.MOTOR)
-            write_i8(serial_file, motor_speed) #valeur moteur droit
-            write_i8(serial_file, -motor_speed) #valeur moteur gauche
-            time.sleep(step_length)
+            print("Turn left at " + str(self.motor_speed) + "%...")
+            self.motor.data[0] = self.motor_speed #valeur moteur droit
+            self.motor.data[1] = -self.motor_speed #valeur moteur gauche
+            time.sleep(self.step_length)
             print('stop motors')
-            write_order(serial_file, Order.STOP)
+            self.motor.data = [0,0]
+            self.motor_command.publish(self.motor)
         elif cmd_type["[tr] turn right"]:
-            print("Turn right at " + str(motor_speed) + "%...")
-            write_order(serial_file, Order.MOTOR)
-            write_i8(serial_file, -motor_speed) #valeur moteur droit
-            write_i8(serial_file, motor_speed) #valeur moteur gauche
-            time.sleep(step_length)
+            print("Turn right at " + str(self.motor_speed) + "%...")
+            self.motor.data[0] = -self.motor_speed #valeur moteur droit
+            self.motor.data[1] = self.motor_speed #valeur moteur gauche
+            time.sleep(self.step_length)
             print('stop motors')
-            write_order(serial_file, Order.STOP)
+            self.motor.data = [0,0]
+            self.motor_command.publish(self.motor)
         elif cmd_type["[p]ause motors"]:
             print("Stopping...")
-            write_order(serial_file, Order.STOP)
+            self.motor.data = [0,0]
+            self.motor_command.publish(self.motor)
         elif cmd_type["[s]ervo move"]:
             print("Moving front servo...")
-            write_order(serial_file, Order.SERVO)
-            write_i16(serial_file, 45) #valeur angle servo
+            self.servo_command.publish(45)
             time.sleep(2)
-            write_order(serial_file, Order.SERVO)
-            write_i16(serial_file, 90) #valeur angle servo
-        elif cmd_type["[m]essage arduino"]:
-            lresp = []
-            total = 100
-            bits = 16
-            print("Hello there...")
-            for i in range(total):
-                while True:
-                    ref = random.getrandbits(bits)
-                    if ref < 32767:
-                        break
-                resp = listenArduino(ref)
-                if resp != ref:
-                   lresp.append(resp)
-            print("% of lost packets: " + str(len(lresp)*100/total) + "% for "+str(total)+" packets")
+            self.servo_command.publish(90)
         elif cmd_type["[t]est motor msgs"]:
 
             print("Spinning motors...\n")
@@ -210,31 +203,39 @@ class Dialogue:
 
             for i in range(total):
 
-                self.command.publish("test")
-                self.sent.data = [self.motor_speed, self.motor_speed]
-                self.motor_command.publish(self.sent)
+                self.motor.data = [self.motor_speed, self.motor_speed]
+                self.arduino.motor = self.motor
+                #self.motor_command.publish(self.motor)
+                self.data.publish(self.arduino)
                 self.motor_speed = self.motor_speed - 1
-
                 rate.sleep()
     
             self.motor_speed = 0
-            self.sent.data = [0,0]
-            self.motor_command.publish(self.sent)
-            print("% of lost packets: " + str(len(self.loss)*100/total) + "% for "+str(total)+" packets\n")
-            self.command.publish("stop")
+            self.motor.data = [self.motor_speed, self.motor_speed]
+            self.arduino.motor = self.motor
+            #self.motor_command.publish(self.motor)
+            self.data.publish(self.arduino)
+            print("% of lost packets: " + str((1-len(self.loss)/total)*100) + "% for "+str(total)+" packets\n")
             rate.sleep()
         else:
             print("Invalid command")
 
 
+#===============================================================================================
+# Main function for input acquisition
+#===============================================================================================
+
 def main():
 
     diag = Dialogue()
+    diag.motor.data = [diag.motor_speed, diag.motor_speed]
+    diag.servo.data = 90
+    diag.encoder.data = [0,0]
 
     print("Press enter to validate your commands")
     print("Enter h to get the list of valid commands")
     cmd_str = ''
-    while cmd_str != 'q' or not rospy.is_shutdown():
+    while cmd_str != 'q' and not rospy.is_shutdown():
 
         cmd_str = input("Enter your command: ")
         diag.process_cmd(cmd_str)
@@ -244,6 +245,5 @@ if __name__ == "__main__":
     try:
         rospy.init_node('raspi_ard_chat', anonymous=True)
         main()
-        rospy.spin()
     except rospy.ROSInterruptException:
         pass
