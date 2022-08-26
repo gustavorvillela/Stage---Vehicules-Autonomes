@@ -35,7 +35,7 @@ int8_t motor_speed_left = 0;
 // Defining ROS variables
 //************************
 
-ros::NodeHandle_<ArduinoHardware,2,2,150,150> nh; //ROS node
+ros::NodeHandle_<ArduinoHardware,2,2,300,150> nh; //ROS node
 
 //Starting messages
 std_msgs::Int8MultiArray wheels;
@@ -59,7 +59,7 @@ void commCB( const arduino_msgs::Ardata &arduino){
   {
     //Motor callback
   
-    wheels.data = arduino.motor.data;
+    wheels = arduino.motor;
     mot.publish( &wheels );
     motor_speed_right = arduino.motor.data[0];
     motor_speed_left = arduino.motor.data[1];
