@@ -48,8 +48,8 @@ class Imager:
         msg.format = "jpeg"
         msg.data = np.array(cv2.imencode('.jpg', gray)[1]).tobytes()
         # Publish new image
-        cv2.imshow('filtered_image',gray)
-        cv2.waitKey(3)
+        #cv2.imshow('filtered_image',gray)
+        #cv2.waitKey(3)
         self.image_pub.publish(msg)
 
 if __name__ == "__main__":

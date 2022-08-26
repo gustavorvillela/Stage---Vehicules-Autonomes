@@ -102,12 +102,16 @@ class Dialogue:
             for key in cmd_type.keys():
                 print(key)
         elif cmd_type["[e]ncoder values"]:
+            self.arduino.command = 3
+            self.data.publish(self.arduino)
             print('left encoder : ', self.encoder.data[1] )
             print('right encoder : ', self.encoder.data[0])
         elif cmd_type["[z]ero setting encoders"]:
             print("Resetting encoders...")
+            self.arduino.command = 1
             self.encoder.data = [0,0]
-            self.encoder_command.publish(self.encoder)
+            self.arduino.encoder = self.encoder
+            self.data.publish(self.arduino)
             print('left encoder : ', self.encoder.data[1])
             print('right encoder : ', self.encoder.data[0])
         elif cmd_type["(%) set motor speed percentage"]:
@@ -115,87 +119,89 @@ class Dialogue:
             print("Speed set to " + cmd + "%")
         elif cmd_type["[f]orward step"]:
             print("Moving forward at " + str(self.motor_speed) + "%...")
-            self.arduino.command = 0
             self.motor.data = [self.motor_speed, self.motor_speed]
-            #self.motor_command.publish(self.motor)
             self.update_motor()
             time.sleep(self.step_length)
             print('stop motors')
             self.motor.data = [0,0]
             self.update_motor()
-            #self.motor_command.publish(self.motor)
         elif cmd_type["[l] left step"]:
             print("Forward left at " + str(self.motor_speed) + "%...")
             self.motor.data[0] = 0 #valeur moteur droit
             self.motor.data[1] = self.motor_speed #valeur moteur gauche
+            self.update_motor()
             time.sleep(self.step_length)
             print('stop motors')
             self.motor.data = [0,0]
-            self.motor_command.publish(self.motor)
+            self.update_motor()
         elif cmd_type["[r] right step"]:
             print("Forward right at " + str(self.motor_speed) + "%...")
             self.motor.data[0] = self.motor_speed #valeur moteur droit
             self.motor.data[1] = 0 #valeur moteur gauche
+            self.update_motor()
             time.sleep(self.step_length)
             print('stop motors')
             self.motor.data = [0,0]
-            self.motor_command.publish(self.motor)
+            self.update_motor()
         elif cmd_type["[b]ackward step"]:
             print("Moving backward at " + str(self.motor_speed) + "%...")
+            self.arduino.command = 0
             self.motor.data = [-self.motor_speed, -self.motor_speed]
-            self.motor_command.publish(self.motor)
+            self.update_motor()
             time.sleep(self.step_length)
             print('stop motors')
             self.motor.data = [0,0]
-            self.motor_command.publish(self.motor)
+            self.update_motor()
         elif cmd_type["[lb] left step back"]:
             print("Backward left at " + str(self.motor_speed) + "%...")
             self.motor.data[0] = 0 #valeur moteur droit
             self.motor.data[1] = -self.motor_speed #valeur moteur gauche
+            self.update_motor()
             time.sleep(self.step_length)
             print('stop motors')
             self.motor.data = [0,0]
-            self.motor_command.publish(self.motor)
+            self.update_motor()
         elif cmd_type["[rb] right step back"]:
             print("Backward right at " + str(self.motor_speed) + "%...")
             self.motor.data[0] = -self.motor_speed #valeur moteur droit
             self.motor.data[1] = 0 #valeur moteur gauche
+            self.update_motor()
             time.sleep(self.step_length)
             print('stop motors')
             self.motor.data = [0,0]
-            self.motor_command.publish(self.motor)
+            self.update_motor()
         elif cmd_type["[ff]orward"]:
             print("Moving forward at " + str(self.motor_speed) + "%...")
             self.motor.data = [self.motor_speed, self.motor_speed]
-            self.motor_command.publish(self.motor)
+            self.update_motor()
         elif cmd_type["[bb]ackward"]:
             print("Moving backward at " + str(self.motor_speed) + "%...")
             self.motor.data = [-self.motor_speed, -self.motor_speed]
-            self.motor_command.publish(self.motor)
+            self.update_motor()
         elif cmd_type["[tl] turn left"]:
             print("Turn left at " + str(self.motor_speed) + "%...")
             self.motor.data[0] = self.motor_speed #valeur moteur droit
             self.motor.data[1] = -self.motor_speed #valeur moteur gauche
+            self.update_motor()
             time.sleep(self.step_length)
             print('stop motors')
             self.motor.data = [0,0]
-            self.motor_command.publish(self.motor)
+            self.update_motor()
         elif cmd_type["[tr] turn right"]:
             print("Turn right at " + str(self.motor_speed) + "%...")
             self.motor.data[0] = -self.motor_speed #valeur moteur droit
             self.motor.data[1] = self.motor_speed #valeur moteur gauche
+            self.update_motor()
             time.sleep(self.step_length)
             print('stop motors')
             self.motor.data = [0,0]
-            self.motor_command.publish(self.motor)
+            self.update_motor()
         elif cmd_type["[p]ause motors"]:
             print("Stopping...")
             self.motor.data = [0,0]
-            #self.motor_command.publish(self.motor)
             self.update_motor()
         elif cmd_type["[s]ervo move"]:
             print("Moving front servo...")
-            #self.servo_command.publish(45)
             self.servo.data = 45
             self.arduino.servo = self.servo
             self.arduino.command = 2
@@ -204,7 +210,6 @@ class Dialogue:
             self.servo.data = 90
             self.arduino.servo = self.servo
             self.data.publish(self.arduino)
-            #self.servo_command.publish(90)
         elif cmd_type["[t]est motor msgs"]:
 
             print("Spinning motors...\n")
@@ -212,19 +217,16 @@ class Dialogue:
             self.motor_speed = 50
             total = 10
             rate = rospy.Rate(1)
-            self.arduino.command = 0
 
             for i in range(total):
 
                 self.motor.data = [self.motor_speed, self.motor_speed]
-                #self.motor_command.publish(self.motor)
                 self.update_motor()
                 self.motor_speed = self.motor_speed - 1
                 rate.sleep()
     
             self.motor_speed = 0
             self.motor.data = [self.motor_speed, self.motor_speed]
-            #self.motor_command.publish(self.motor)
             self.update_motor()
             print("% of lost packets: " + str((1-len(self.loss)/total)*100) + "% for "+str(total)+" packets\n")
             self.motor_speed = 60
@@ -234,8 +236,8 @@ class Dialogue:
 
     def update_motor(self):
 
+        self.arduino.command = 0
         self.arduino.motor = self.motor
-        print(self.arduino.motor.data)
         self.data.publish(self.arduino)
 
 #===============================================================================================

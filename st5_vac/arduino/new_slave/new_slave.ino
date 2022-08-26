@@ -23,7 +23,7 @@ Servo frontServo, backServo;    // create servo objects
 #define  backPin 8
 int pos = 90;    // initial position of the servos
 int sweepFlag = 1;
-int coder[2] = {
+char coder[2] = {
   0,0};
 int lastSpeed[2] = {
   0,0};
@@ -59,22 +59,42 @@ void commCB( const arduino_msgs::Ardata &arduino){
   {
     //Motor callback
   
-    wheels = arduino.motor;
+    wheels.data = arduino.motor.data;
     mot.publish( &wheels );
     motor_speed_right = arduino.motor.data[0];
     motor_speed_left = arduino.motor.data[1];
     
   }
-  else if (arduino.command == 1)
+  else if (arduino.command == 1 || arduino.command == 3)
   {
     //Encoder callback
-    right = arduino.encoder.data[0];
-    left = arduino.encoder.data[1];
 
-    coder[LEFT] = left;
-    coder[RIGHT] = right;
+    if (arduino.command == 1)
+    {
 
-    update_encoder();
+      right = arduino.encoder.data[0];
+      left = arduino.encoder.data[1];
+
+      coder[LEFT] = left;
+      coder[RIGHT] = right;
+    
+    }
+
+    else
+    {
+      //doesn't actually reads he encoder values but the topic works
+
+      LwheelSpeed();
+      RwheelSpeed();
+    
+    }
+
+    encoder = arduino.encoder;
+    encoder.data[0] = coder[LEFT];
+    encoder.data[1] = coder[RIGHT];
+
+    enc.publish( &encoder );
+    
   }
   else if (arduino.command == 2)
   {
@@ -126,13 +146,6 @@ void loop() {
   delay(10);
 }
 
-void update_encoder()
-{
-  encoder.data[RIGHT] = coder[RIGHT];
-  encoder.data[LEFT] = coder[LEFT];
-
-  enc.publish( &encoder );
-}
 
 void update_motors_orders()
 {
